@@ -16,6 +16,7 @@ const MarketLearner = require('./src/ai/marketLearner');
 const CRTAnalyzer = require('./src/analysis/crtAnalyzer'); // CRT ao invés de SMC!
 const CRTValidator = require('./src/validators/CRTValidator'); // Validador inteligente!
 const BinanceTradeExecutor = require('./src/trading/BinanceTradeExecutor'); // Executor REAL!
+const { getInstance: getKnowledgeApplicator } = require('./src/ai/KnowledgeApplicator'); // 🧠 MEMÓRIA DA IA!
 
 // Configuração
 const app = express();
@@ -36,6 +37,7 @@ const aiLearner = new MarketLearner();
 const crtAnalyzer = new CRTAnalyzer(); // CRT Analyzer!
 const crtValidator = new CRTValidator(); // Validador automático!
 const tradeExecutor = new BinanceTradeExecutor(client); // Executor REAL!
+const knowledgeApplicator = getKnowledgeApplicator(); // 🧠 APLICADOR DE CONHECIMENTO!
 
 // Estado global
 let state = {
@@ -817,8 +819,22 @@ server.listen(PORT, async () => {
     console.log(`💰 Initial Balance: $${state.balance.total}`);
     console.log('🚀 ========================================');
 
+    // 🧠 Inicializar memória permanente da IA
+    console.log('\n🧠 Carregando memória da IA...');
+    try {
+        await knowledgeApplicator.initialize();
+        const summary = knowledgeApplicator.getSummary();
+        console.log(`✅ Memória carregada:`);
+        console.log(`   💡 ${summary.totalKnowledge.concepts} conceitos`);
+        console.log(`   🎯 ${summary.totalKnowledge.strategies} estratégias`);
+        console.log(`   📹 ${summary.totalKnowledge.videos} vídeos processados`);
+        console.log(`   📊 Performance: ${summary.performance.avgConceptSuccess} sucesso\n`);
+    } catch (error) {
+        console.log(`⚠️ Erro ao carregar memória: ${error.message}\n`);
+    }
+
     // Configurar Binance Futures automaticamente
-    console.log('\n⚙️ Configurando Binance Futures...');
+    console.log('⚙️ Configurando Binance Futures...');
     try {
         await tradeExecutor.setMarginType(state.activePair, 'ISOLATED');
         await tradeExecutor.setLeverage(state.activePair, 10); // Alavancagem 10x
