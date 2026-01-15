@@ -428,6 +428,7 @@ function isNearSupportResistance(candle, premiumDiscount) {
 
 // ===== EXECUÇÃO DE TRADES =====
 
+
 async function executeTrade(signal) {
     if (!state.config.autoTrading) {
         console.log('🔒 Auto-trading desabilitado. Sinal ignorado.');
@@ -437,6 +438,69 @@ async function executeTrade(signal) {
     if (state.currentTrade) {
         console.log('⚠️ Já existe uma operação ativa.');
         return;
+    }
+
+    // 🧠 CONSULTAR IA ANTES DE EXECUTAR!
+    console.log('\n🧠 Consultando IA para validar trade...');
+
+    try {
+        const currentPrice = parseFloat(state.candles[state.candles.length - 1].close);
+        const priceAction = signal.type === 'LONG' ? 'support' : 'rejection';
+
+        const aiEnhancements = await knowledgeApplicator.enhanceCRTAnalysis(
+            state.analysis.crt,
+            {
+                trend: signal.type,
+                priceAction: priceAction,
+                currentPrice: currentPrice
+            }
+        );
+
+        // 📊 Mostrar o que a IA aplicou
+        console.log(`\n📊 Análise da IA:`);
+        console.log(`   Confidence original: ${(signal.confidence * 100).toFixed(1)}%`);
+        console.log(`   Confidence ajustada: ${(aiEnhancements.adjustedConfidence * 100).toFixed(1)}%`);
+
+        if (aiEnhancements.appliedConcepts.length > 0) {
+            console.log(`   🎯 Conceitos aplicados:`);
+            aiEnhancements.appliedConcepts.forEach(c => {
+                console.log(`      - ${c.name} (impacto: +${(c.impact * 100).toFixed(1)}%, confidence: ${(c.confidence * 100).toFixed(1)}%)`);
+            });
+        }
+
+        if (aiEnhancements.suggestions.length > 0) {
+            console.log(`   💡 Sugestões da IA:`);
+            aiEnhancements.suggestions.forEach(s => {
+                console.log(`      - ${s.strategy}: ${s.action} (confidence: ${(s.confidence * 100).toFixed(1)}%)`);
+            });
+        }
+
+        // ✅ Aplicar melhorias da IA ao signal
+        const enhancedSignal = {
+            ...signal,
+            confidence: aiEnhancements.adjustedConfidence,
+            reasons: [
+                ...signal.reasons,
+                ...aiEnhancements.appliedConcepts.map(c => `IA: ${c.name}`)
+            ],
+            aiEnhancements: aiEnhancements  // Guardar para usar depois
+        };
+
+        // 🚫 Bloquear trade se IA não confia
+        if (aiEnhancements.adjustedConfidence < 0.4) {
+            console.log(`\n⚠️ IA BLOQUEOU TRADE: Confidence muito baixa (${(aiEnhancements.adjustedConfidence * 100).toFixed(1)}%)`);
+            console.log(`   Mínimo necessário: 40%`);
+            return;
+        }
+
+        console.log(`\n✅ IA APROVOU TRADE com ${(aiEnhancements.adjustedConfidence * 100).toFixed(1)}% de confidence\n`);
+
+        // Usar signal melhorado pela IA
+        signal = enhancedSignal;
+
+    } catch (error) {
+        console.error('❌ Erro ao consultar IA:', error);
+        console.log('⚠️ Continuando sem análise da IA...\n');
     }
 
     const riskAmount = state.balance.available * state.config.maxRiskPerTrade;
@@ -477,7 +541,8 @@ async function executeTrade(signal) {
         reasons: signal.reasons,
         entryTime: signal.timestamp,
         status: 'OPEN',
-        realTradeInfo: realTradeResult.success ? realTradeResult.tradeInfo : null
+        realTradeInfo: realTradeResult.success ? realTradeResult.tradeInfo : null,
+        aiEnhancements: signal.aiEnhancements || null  // Guardar para registrar resultado depois
     };
 
     state.balance.inPosition = parseFloat(quantity) * signal.entry;
@@ -580,6 +645,32 @@ function closeTrade(exitPrice, reason, profit) {
     }
 
     state.stats.winRate = (state.stats.winningTrades / state.stats.totalTrades) * 100;
+
+    // 🧠 REGISTRAR RESULTADO NA IA PARA APRENDIZADO!
+    if (trade.aiEnhancements && trade.aiEnhancements.appliedConcepts) {
+        const wasSuccessful = profit > 0;
+
+        console.log(`\n🧠 Registrando resultado na IA...`);
+        console.log(`   Resultado: ${wasSuccessful ? '✅ WIN' : '❌ LOSS'}`);
+
+        // Registrar cada conceito aplicado
+        trade.aiEnhancements.appliedConcepts.forEach(async (concept) => {
+            try {
+                await knowledgeApplicator.recordResult(
+                    'concept',
+                    concept.id || concept.name.toLowerCase().replace(/[^a-z0-9]+/g, '_'),
+                    wasSuccessful
+                );
+                console.log(`   📊 Conceito "${concept.name}": ${wasSuccessful ? 'sucesso' : 'falha'} registrado`);
+            } catch (error) {
+                console.error(`   ❌ Erro ao registrar conceito:`, error.message);
+            }
+        });
+
+        console.log(`   ✅ IA atualizou performance dos conceitos aplicados\n`);
+    } else {
+        console.log(`   ⚠️ Trade não tinha conceitos da IA aplicados\n`);
+    }
 
     // Ensinar a IA
     const lastAnalysis = state.analysis;
