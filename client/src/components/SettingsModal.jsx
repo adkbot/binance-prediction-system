@@ -13,7 +13,8 @@ export default function SettingsModal({ isOpen, onClose, settings, onSave }) {
 
         // Configurações de Trading
         exchange: settings?.exchange || 'binance', // binance ou bybit
-        tradeAmount: settings?.tradeAmount || 100, // USDT
+        tradingBalance: settings?.tradingBalance || 100, // Saldo total para operar
+        tradeAmount: settings?.tradeAmount || 100, // USDT por trade
         leverage: settings?.leverage || 10, // 1x a 100x
 
         // Usuário
@@ -228,6 +229,20 @@ export default function SettingsModal({ isOpen, onClose, settings, onSave }) {
                             </div>
 
                             <div className="form-group">
+                                <label>💰 Saldo para Trading (USDT)</label>
+                                <input
+                                    type="number"
+                                    min="10"
+                                    step="10"
+                                    value={formData.tradingBalance || 100}
+                                    onChange={(e) => handleChange('tradingBalance', parseFloat(e.target.value))}
+                                    placeholder="Quanto você quer usar para operar?"
+                                    style={{ fontSize: '1.1rem', fontWeight: '600' }}
+                                />
+                                <small>💡 Este é o valor TOTAL que o sistema vai usar para operar</small>
+                            </div>
+
+                            <div className="form-group">
                                 <label>Valor por Trade (USDT)</label>
                                 <input
                                     type="number"
@@ -258,18 +273,22 @@ export default function SettingsModal({ isOpen, onClose, settings, onSave }) {
                             </div>
 
                             <div className="calculation-box">
-                                <h4>📊 Resumo da Operação:</h4>
+                                <h4>📊 Resumo:</h4>
                                 <div className="calc-row">
-                                    <span>Valor Investido:</span>
-                                    <span className="value">${formData.tradeAmount.toFixed(2)}</span>
+                                    <span>💰 Saldo para Operar:</span>
+                                    <span className="value">${(formData.tradingBalance || 100).toFixed(2)} USDT</span>
                                 </div>
                                 <div className="calc-row">
-                                    <span>Alavancagem:</span>
+                                    <span>📈 Valor por Trade:</span>
+                                    <span className="value">${formData.tradeAmount.toFixed(2)} USDT</span>
+                                </div>
+                                <div className="calc-row">
+                                    <span>⚡ Alavancagem:</span>
                                     <span className="value">{formData.leverage}x</span>
                                 </div>
                                 <div className="calc-row highlight">
-                                    <span>Exposição Total:</span>
-                                    <span className="value">${(formData.tradeAmount * formData.leverage).toFixed(2)}</span>
+                                    <span>🎯 Exposição por Trade:</span>
+                                    <span className="value">${(formData.tradeAmount * formData.leverage).toFixed(2)} USDT</span>
                                 </div>
                             </div>
                         </div>

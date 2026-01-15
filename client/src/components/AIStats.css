@@ -1,6 +1,10 @@
 .ai-stats-card {
     border: 2px solid var(--accent-secondary);
     background: linear-gradient(135deg, rgba(108, 92, 231, 0.05) 0%, var(--bg-card) 100%);
+    max-height: 400px;
+    /* Limitar altura */
+    overflow-y: auto;
+    /* Scroll se necessário */
 }
 
 .ai-trained-badge {
@@ -10,7 +14,8 @@
 .ai-stats-content {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-lg);
+    gap: 8px;
+    /* Reduzido de var(--spacing-lg) */
 }
 
 /* TRAINING SECTION */

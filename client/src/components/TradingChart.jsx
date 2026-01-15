@@ -221,10 +221,21 @@ export default function TradingChart({ candles, candles4h, analysis, currentTrad
                     lastValueVisible: true,
                 });
 
-                const pccData = candles.map(c => ({
+                // Criar dados e REMOVER DUPLICATAS
+                let pccData = candles.map(c => ({
                     time: Math.floor(c.time / 1000),
                     value: crt.pcc
                 })).filter(d => d.value && !isNaN(d.value));
+
+                // REMOVER TIMESTAMPS DUPLICADOS (mantém apenas o primeiro)
+                const seenTimes = new Set();
+                pccData = pccData.filter(d => {
+                    if (seenTimes.has(d.time)) {
+                        return false; // Já vimos este timestamp
+                    }
+                    seenTimes.add(d.time);
+                    return true;
+                });
 
                 if (pccData.length > 0) {
                     pccLine.setData(pccData);
@@ -277,25 +288,40 @@ export default function TradingChart({ candles, candles4h, analysis, currentTrad
                 });
 
                 // Criar dados para as linhas
-                const openData = candles.map(c => ({
+                let openData = candles.map(c => ({
                     time: Math.floor(c.time / 1000),
                     value: crt.currentH4.open
                 }));
 
-                const closeData = candles.map(c => ({
+                let closeData = candles.map(c => ({
                     time: Math.floor(c.time / 1000),
                     value: crt.currentH4.close
                 }));
 
-                const highData = candles.map(c => ({
+                let highData = candles.map(c => ({
                     time: Math.floor(c.time / 1000),
                     value: crt.currentH4.high
                 }));
 
-                const lowData = candles.map(c => ({
+                let lowData = candles.map(c => ({
                     time: Math.floor(c.time / 1000),
                     value: crt.currentH4.low
                 }));
+
+                // REMOVER DUPLICATAS de cada dataset
+                const removeDuplicates = (data) => {
+                    const seen = new Set();
+                    return data.filter(d => {
+                        if (seen.has(d.time)) return false;
+                        seen.add(d.time);
+                        return true;
+                    });
+                };
+
+                openData = removeDuplicates(openData);
+                closeData = removeDuplicates(closeData);
+                highData = removeDuplicates(highData);
+                lowData = removeDuplicates(lowData);
 
                 openLine.setData(openData);
                 closeLine.setData(closeData);

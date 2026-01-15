@@ -40,7 +40,14 @@ function App() {
     }, []);
 
     const connectWebSocket = () => {
+        // Fechar conexão anterior se existir
+        if (wsRef.current) {
+            wsRef.current.close();
+            wsRef.current = null;
+        }
+
         const ws = new WebSocket(WS_URL);
+        let reconnectTimeout;
 
         ws.onopen = () => {
             console.log('✅ Conectado ao servidor');
@@ -48,20 +55,31 @@ function App() {
         };
 
         ws.onmessage = (event) => {
-            const message = JSON.parse(event.data);
-            setData(message);
+            try {
+                const message = JSON.parse(event.data);
+                setData(message);
+            } catch (error) {
+                console.error('❌ Erro ao parsear mensagem:', error);
+            }
         };
 
         ws.onerror = (error) => {
             console.error('❌ Erro WebSocket:', error);
         };
 
-        ws.onclose = () => {
+        ws.onclose = (event) => {
             console.log('🔌 Desconectado do servidor');
             setConnected(false);
+            wsRef.current = null;
 
-            // Reconectar após 3 segundos
-            setTimeout(connectWebSocket, 3000);
+            // Evitar reconexão em loop se servidor estiver parando
+            if (!event.wasClean) {
+                // Reconectar após 3 segundos apenas se não foi fechamento limpo
+                console.log('🔄 Reconectando em 3 segundos...');
+                reconnectTimeout = setTimeout(() => {
+                    connectWebSocket();
+                }, 3000);
+            }
         };
 
         wsRef.current = ws;
