@@ -17,6 +17,7 @@ const CRTAnalyzer = require('./src/analysis/crtAnalyzer'); // CRT ao invés de S
 const CRTValidator = require('./src/validators/CRTValidator'); // Validador inteligente!
 const BinanceTradeExecutor = require('./src/trading/BinanceTradeExecutor'); // Executor REAL!
 const { getInstance: getKnowledgeApplicator } = require('./src/ai/KnowledgeApplicator'); // 🧠 MEMÓRIA DA IA!
+const { getInstance: getVideoProcessor } = require('./src/ai/VideoProcessor'); // 🎥 PROCESSADOR DE VÍDEOS!
 
 // Configuração
 const app = express();
@@ -914,6 +915,18 @@ async function runAutomaticLearning() {
     try {
         const startTime = Date.now();
 
+        // 0. 🎥 PROCESSAR VÍDEOS PENDENTES PRIMEIRO!
+        const videoProcessor = getVideoProcessor();
+        const videoStats = videoProcessor.getStats();
+
+        if (videoStats.queueLength > 0) {
+            console.log(`📹 Processando ${videoStats.queueLength} vídeos pendentes...`);
+            const result = await videoProcessor.processPendingVideos();
+            console.log(`✅ ${result.processed}/${result.total} vídeos processados!\n`);
+        } else {
+            console.log('📹 Nenhum vídeo novo para processar\n');
+        }
+
         // 1. Recarregar conhecimento ativo
         await knowledgeApplicator.loadActiveKnowledge();
 
@@ -1008,7 +1021,19 @@ server.listen(PORT, async () => {
         console.log(`⚠️ Erro na configuração Futures: ${error.message}\n`);
     }
 
-    // 🎓 Iniciar sistema de aprendizado automático
+    // � Inicializar VideoProcessor com biblioteca de conhecimento
+    console.log('🎥 Carregando biblioteca de vídeos...');
+    try {
+        const videoProcessor = getVideoProcessor();
+        videoProcessor.loadDefaultVideos();
+        const videoStats = videoProcessor.getStats();
+        console.log(`✅ ${videoStats.totalProcessed} vídeos já processados`);
+        console.log(`📚 ${videoStats.queueLength} vídeos na fila\n`);
+    } catch (error) {
+        console.log(`⚠️ Erro ao carregar vídeos: ${error.message}\n`);
+    }
+
+    // �🎓 Iniciar sistema de aprendizado automático
     startAutomaticLearning();
 
     startMarketStream();
